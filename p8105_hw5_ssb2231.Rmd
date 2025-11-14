@@ -3,7 +3,6 @@ title: "P8105 Homework 5"
 author: "Satya Batna"
 output: github_document
 ---
-## Loading Libraries 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -13,7 +12,6 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(broom)
-library(purrr)
 ```
 ---
 
@@ -38,8 +36,6 @@ birthday_results <-
     )
   )
 
-birthday_results
-
 birthday_results |>
   ggplot(aes(x = group_size, y = shared_prob)) +
   geom_line() +
@@ -51,3 +47,99 @@ birthday_results |>
   ) +
   theme_minimal()
 ```
+
+The resulting plot shows a nonlinear increase in the probability as group size grows. When groups are small,  the probability of a shared birthday is low. The probability starts increasing more noticeably around group sizes 15–20 people, and by approximately 23 people the probability reaches about 50 percent. For groups of 50, the probability is nearly 100 percent so it is almost gaurannteeed that someone will share birthdays in this simualtion. 
+
+## Problem 2
+```{r problem2, echo = FALSE, message = TRUE, warning = FALSE}
+set.seed(1)
+
+# Set Numbers 
+n       <- 30
+sigma   <- 5
+mu_vals <- 0:6
+n_sims  <- 5000
+
+# One-sample t-test
+sim_results_list <- lapply(mu_vals, function(mu) {
+  
+  sims <- replicate(
+    n_sims,
+    {
+      x <- rnorm(n, mean = mu, sd = sigma)
+      test_out <- t.test(x, mu = 0)
+      
+      c(
+        estimate = mean(x),
+        p_value  = test_out$p.value
+      )
+    },
+    simplify = TRUE
+  )
+  
+  tibble(
+    mu_true  = mu,
+    estimate = sims["estimate", ],
+    p_value  = sims["p_value", ]
+  )
+})
+
+sim_results <- bind_rows(sim_results_list)
+
+# Power
+power_df <- 
+  sim_results |>
+  group_by(mu_true) |>
+  summarize(
+    power = mean(p_value < 0.05),
+    .groups = "drop"
+  )
+
+power_df
+
+power_plot <- 
+  power_df |>
+  ggplot(aes(x = mu_true, y = power)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = "Power of one-sample t-test by true mean",
+    x = "True mean (mu)",
+    y = "Proportion of rejections (power)"
+  ) +
+  theme_minimal()
+
+power_plot
+
+# Average estimates
+estimate_df <- 
+  sim_results |>
+  group_by(mu_true) |>
+  summarize(
+    mean_est_all = mean(estimate),
+    mean_est_sig = mean(estimate[p_value < 0.05]),
+    .groups = "drop"
+  )
+
+estimate_df
+
+estimate_plot <- 
+  estimate_df |>
+  ggplot(aes(x = mu_true)) +
+  geom_line(aes(y = mean_est_all), linetype = "solid") +
+  geom_point(aes(y = mean_est_all)) +
+  geom_line(aes(y = mean_est_sig), linetype = "dashed") +
+  geom_point(aes(y = mean_est_sig)) +
+  labs(
+    title = "Average estimate of mu by True mu",
+    x = "True mean (mu)",
+    y = "Average estimate",
+    caption = "Solid: all simulations; dashed: only where H0 rejected"
+  ) +
+  theme_minimal()
+
+estimate_plot
+```
+
+
