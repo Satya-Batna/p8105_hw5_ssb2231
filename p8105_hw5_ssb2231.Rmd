@@ -1,0 +1,16 @@
+---
+title: "P8105 Homework 5"
+author: "Satya Batna"
+output: github_document
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+
+library(tidyverse)
+library(broom)
+library(purrr)
+```
