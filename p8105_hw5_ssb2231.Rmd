@@ -141,5 +141,97 @@ estimate_plot <-
 
 estimate_plot
 ```
+1. Power vs. effect size
 
+The plot with Power shows that when the true mean is zero, the null is rejected about 0.05 or (5% of the time). As effect size increases, the proportion of rejections rises too. This shows us that the larger effect sizes the higher the power.
 
+2. Average estimate vs. true mean
+
+The plot shows that the average estimate across all simulations is very close to the true mean, which means the sample mean is unbiased, But, when looking only at simulations where the null hypothesis was rejected, the average estimate is higher than the true mean, especially when the true mean is small. This happens because we are only keeping the samples that are significant, which causes the estimates in that group to be higher. 
+
+```{r, echo = FALSE, message = TRUE, warning = FALSE}
+library(purrr)
+
+# ------------------------------------------------------------------------
+# Load raw data
+# ------------------------------------------------------------------------
+
+homicides =
+  read_csv("data/homicide-data.csv")
+
+#Data organization 
+
+homicide_summary =
+  homicides |>
+  mutate(
+    city_state = str_c(city, ", ", state),
+    unsolved = disposition %in% c("Closed without arrest", "Open/No arrest")
+  ) |>
+  group_by(city_state) |>
+  summarize(
+    total_homicides    = n(),
+    unsolved_homicides = sum(unsolved),
+    .groups = "drop"
+  )
+
+homicide_summary
+
+# Only Baltimore Testing
+
+baltimore_summary =
+  homicide_summary |>
+  filter(city_state == "Baltimore, MD")
+
+baltimore_summary
+
+baltimore_test =
+  prop.test(
+    x = baltimore_summary$unsolved_homicides,
+    n = baltimore_summary$total_homicides
+  )
+
+baltimore_tidy = tidy(baltimore_test)
+baltimore_tidy
+
+#For the other cities too
+city_prop_results =
+  homicide_summary |>
+  mutate(
+    prop_test = map2(
+      unsolved_homicides,
+      total_homicides,
+      \(x, n) prop.test(x, n)
+    ),
+    prop_tidy = map(prop_test, tidy)
+  ) |>
+  unnest(prop_tidy) |>
+  select(
+    city_state,
+    total_homicides,
+    unsolved_homicides,
+    estimate,
+    conf.low,
+    conf.high
+  )
+
+city_prop_results
+
+# Plot
+
+city_plot =
+  city_prop_results |>
+  mutate(city_state = fct_reorder(city_state, estimate)) |>
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0) +
+  coord_flip() +
+  labs(
+    title = "Estimated Proportion of Unsolved Homicides by City",
+    x = "City",
+    y = "Estimated Proportion unsolved"
+  ) +
+  theme_minimal()
+
+city_plot
+```
+Chicago, IL seem to have the most unsolved cases, probably why every crime show takes place there. Tulsa, AL has the least unsolved cases. 
