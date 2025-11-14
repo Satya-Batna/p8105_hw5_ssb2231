@@ -3,6 +3,7 @@ title: "P8105 Homework 5"
 author: "Satya Batna"
 output: github_document
 ---
+## Loading Libraries 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -13,4 +14,40 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(broom)
 library(purrr)
+```
+---
+
+## Problem 1
+
+```{r,  echo = FALSE , message = TRUE, warning = FALSE}
+birthday_shared <- function(n_people) {
+  birthdays <- sample(1:365, size = n_people, replace = TRUE)
+  any(duplicated(birthdays))
+}
+
+set.seed(1) 
+
+n_sims <- 10000
+
+birthday_results <- 
+  tibble(group_size = 2:50) |>
+  mutate(
+    shared_prob = map_dbl(
+      group_size,
+      ~ mean(replicate(n_sims, birthday_shared(.x)))
+    )
+  )
+
+birthday_results
+
+birthday_results |>
+  ggplot(aes(x = group_size, y = shared_prob)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Estimated Probability of Shared Birthday by Group Size",
+    x = "Group size",
+    y = "Probability"
+  ) +
+  theme_minimal()
 ```
